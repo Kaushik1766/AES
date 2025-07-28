@@ -1,7 +1,10 @@
 // Package aes
 package aes
 
-import "fmt"
+import (
+	"fmt"
+	"sync"
+)
 
 type AES struct {
 	key []byte
@@ -15,11 +18,19 @@ func (a *AES) Encrypt(plaintext string) string {
 	plaintextBytes := []byte(plaintext)
 	brokenPlaintext := BreakPlaintext(plaintextBytes)
 
-	var cipher [][4][4]byte
+	var cipher [][4][4]byte = make([][4][4]byte, len(brokenPlaintext))
 
-	for _, block := range brokenPlaintext {
-		cipher = append(cipher, EncryptBlock(block, a.key))
+	var wg sync.WaitGroup
+
+	for i, block := range brokenPlaintext {
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			cipher[i] = EncryptBlock(block, a.key)
+		}(i)
+		// cipher = append(cipher, EncryptBlock(block, a.key))
 	}
+	wg.Wait()
 
 	result := ""
 
